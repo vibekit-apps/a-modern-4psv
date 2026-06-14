@@ -117,6 +117,7 @@ footer a:hover{color:var(--fg)}
   <ul class="nav-links">
     <li><a href="#features">Why Us</a></li>
     <li><a href="#pricing">Pricing</a></li>
+    <li><a href="/insights.html">Insights</a></li>
     <li><a href="#signup">Contact</a></li>
   </ul>
   <a href="#signup" class="nav-cta">Get Started</a>
@@ -285,6 +286,34 @@ footer a:hover{color:var(--fg)}
     </div>
   </div>
 </section>
+
+<hr class="divider">
+
+<!-- INSIGHTS TEASER -->
+<section style="background:#0d0d0d;padding:5rem 1.5rem">
+  <div class="section-wrap">
+    <div class="section-label">Live Intelligence</div>
+    <h2 class="section-title">Stay ahead of the curve.</h2>
+    <p class="section-sub">Energy savings, smart home tech, government rebates, land news, and sustainable design — curated continuously for builders, buyers, and designers.</p>
+    <div id="teaser-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1.25rem;margin-bottom:2rem"></div>
+    <a href="/insights.html" class="btn-ghost" style="display:inline-block">View all insights →</a>
+  </div>
+</section>
+<script>
+fetch('/api/insights?limit=3')
+  .then(r=>r.json())
+  .then(data=>{
+    const g=document.getElementById('teaser-grid');
+    const TAG={energy:'Energy','smart-home':'Smart Home',government:'Grants & Policy',property:'Land & Property',design:'Design'};
+    const COL={energy:'#c8a96e','smart-home':'#60a5fa',government:'#4ade80',property:'#fb923c',design:'#e879f9'};
+    g.innerHTML=data.slice(0,3).map(a=>`
+      <a href="${a.link}" target="_blank" rel="noopener" style="background:#161410;border:1px solid #2a2520;border-radius:12px;padding:1.5rem;display:flex;flex-direction:column;gap:.625rem;text-decoration:none;color:inherit;transition:border-color .2s">
+        <span style="font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:${COL[a.category]||'#c8a96e'}">${TAG[a.category]||a.category}</span>
+        <span style="font-family:Georgia,serif;font-size:1rem;line-height:1.4;color:#f5f0eb">${a.title}</span>
+        <span style="font-size:.8rem;color:#9a9080">${a.source}</span>
+      </a>`).join('');
+  }).catch(()=>{});
+</script>
 
 <hr class="divider">
 

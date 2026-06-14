@@ -1,6 +1,9 @@
 const express = require('express');
 const path = require('path');
 const Database = require('better-sqlite3');
+const { XMLParser } = require('fast-xml-parser');
+const https = require('https');
+const http = require('http');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -20,6 +23,131 @@ db.exec(`
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
+
+// ── INSIGHTS ─────────────────────────────────────────────────────────────────
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS articles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    guid TEXT UNIQUE,
+    title TEXT,
+    link TEXT,
+    summary TEXT,
+    source TEXT,
+    category TEXT,
+    pub_date TEXT,
+    fetched_at TEXT DEFAULT (datetime('now'))
+  )
+`);
+
+const FEEDS = [
+  // Energy saving / efficiency
+  { url: 'https://www.energy.gov/rss.xml',                          source: 'US Dept of Energy',        category: 'energy' },
+  { url: 'https://feeds.feedburner.com/aseannow',                   source: 'ASEAN Now',                category: 'energy' },
+  { url: 'https://www.renewableenergyworld.com/feed/',              source: 'Renewable Energy World',   category: 'energy' },
+  { url: 'https://cleantechnica.com/feed/',                         source: 'CleanTechnica',            category: 'energy' },
+  // Smart home / tech
+  { url: 'https://www.smarthomebeginner.com/feed/',                 source: 'Smart Home Beginner',      category: 'smart-home' },
+  { url: 'https://staceyoniot.com/feed/',                           source: 'Stacey on IoT',            category: 'smart-home' },
+  { url: 'https://www.cnet.com/rss/smart-home/',                    source: 'CNET Smart Home',          category: 'smart-home' },
+  // Government / rebates / policy
+  { url: 'https://www.energy.gov/eere/articles/rss.xml',           source: 'DOE EERE',                 category: 'government' },
+  { url: 'https://feeds.feedburner.com/GreenBiz',                   source: 'GreenBiz',                 category: 'government' },
+  { url: 'https://www.climatechangenews.com/feed/',                 source: 'Climate Change News',      category: 'government' },
+  // Land / property / construction
+  { url: 'https://www.propertynews.com.au/feed/',                   source: 'Property News AU',         category: 'property' },
+  { url: 'https://www.realestate.com.au/news/feed/',                source: 'REA News',                 category: 'property' },
+  { url: 'https://www.constructionweekonline.com/rss.xml',          source: 'Construction Week',        category: 'property' },
+  // Architecture / design
+  { url: 'https://www.archdaily.com/feed',                          source: 'ArchDaily',                category: 'design' },
+  { url: 'https://www.dezeen.com/feed/',                            source: 'Dezeen',                   category: 'design' },
+  { url: 'https://inhabitat.com/feed/',                             source: 'Inhabitat',                category: 'design' },
+];
+
+function fetchUrl(url) {
+  return new Promise((resolve, reject) => {
+    const mod = url.startsWith('https') ? https : http;
+    const req = mod.get(url, { headers: { 'User-Agent': 'EthosInsights/1.0' }, timeout: 8000 }, res => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        return fetchUrl(res.headers.location).then(resolve).catch(reject);
+      }
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => resolve(data));
+    });
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+  });
+}
+
+async function parseFeed(feed) {
+  try {
+    const xml = await fetchUrl(feed.url);
+    const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+    const obj = parser.parse(xml);
+    const channel = obj?.rss?.channel || obj?.feed;
+    if (!channel) return [];
+    const items = channel.item || channel.entry || [];
+    const arr = Array.isArray(items) ? items : [items];
+    return arr.slice(0, 12).map(item => ({
+      guid:     String(item.guid || item.id || item.link || Math.random()),
+      title:    String(item.title || '').replace(/<[^>]+>/g, '').trim(),
+      link:     String(item.link?.['@_href'] || item.link || item.url || ''),
+      summary:  String(item.description || item.summary || item['content:encoded'] || '')
+                  .replace(/<[^>]+>/g, '').trim().slice(0, 300),
+      source:   feed.source,
+      category: feed.category,
+      pub_date: String(item.pubDate || item.published || item.updated || new Date().toISOString()),
+    }));
+  } catch (e) {
+    console.error('Feed error', feed.source, e.message);
+    return [];
+  }
+}
+
+const insertArticle = db.prepare(`
+  INSERT OR IGNORE INTO articles (guid, title, link, summary, source, category, pub_date)
+  VALUES (@guid, @title, @link, @summary, @source, @category, @pub_date)
+`);
+
+async function refreshFeeds() {
+  console.log('Refreshing insight feeds...');
+  let count = 0;
+  for (const feed of FEEDS) {
+    const articles = await parseFeed(feed);
+    for (const a of articles) {
+      try { insertArticle.run(a); count++; } catch (_) {}
+    }
+  }
+  console.log(`Feeds refreshed — ${count} new articles stored.`);
+}
+
+// Refresh on startup + every 3 hours
+refreshFeeds();
+setInterval(refreshFeeds, 3 * 60 * 60 * 1000);
+
+// API: latest insights with optional category filter
+app.get('/api/insights', (req, res) => {
+  const { category, limit = 30, offset = 0 } = req.query;
+  let rows;
+  if (category && category !== 'all') {
+    rows = db.prepare(
+      'SELECT * FROM articles WHERE category = ? ORDER BY pub_date DESC LIMIT ? OFFSET ?'
+    ).all(category, Number(limit), Number(offset));
+  } else {
+    rows = db.prepare(
+      'SELECT * FROM articles ORDER BY pub_date DESC LIMIT ? OFFSET ?'
+    ).all(Number(limit), Number(offset));
+  }
+  res.json(rows);
+});
+
+// Manual refresh trigger (admin only)
+app.post('/api/insights/refresh', (req, res) => {
+  const { pass } = req.query;
+  if (pass !== ADMIN_PASS) return res.status(401).json({ error: 'Unauthorised' });
+  refreshFeeds().then(() => res.json({ ok: true }));
+});
 
 // Submit lead
 app.post('/submit', (req, res) => {
