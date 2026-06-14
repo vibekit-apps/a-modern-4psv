@@ -1,20 +1,20 @@
 # STATUS.md — Live Infrastructure (auto-updated)
-_Last updated: 2026-06-14T22:18:42.454Z_
+_Last updated: 2026-06-14T23:16:48.285Z_
 
 ## Container
 - **Name**: vk-a-modern-4psv
-- **Status**: running
+- **Status**: exited
 - **Started**: 2026-06-14T21:51:57.743094975Z
-- **Resources**: 0.01% CPU | 40.06MiB / 512MiB | 3.54MB / 687kB net
+- **Resources**: 0.00% CPU | 0B / 0B | 0B / 0B net
 - **Memory Limit**: 512MB
 - **Port**: 4075
 
 ## App
-- **Name**: a-modern-4psv
+- **Name**: Purpose productions
 - **Subdomain**: a-modern-4psv.vibekit.bot
-- **DB Status**: running
-- **Health Failures**: 0
-- **Last Healthy**: 2026-06-14T22:18:40.12+00:00
+- **DB Status**: error
+- **Health Failures**: 6
+- **Last Healthy**: 2026-06-14T22:51:16.707+00:00
 
 
 ## Host
@@ -22,16 +22,15 @@ _Last updated: 2026-06-14T22:18:42.454Z_
 
 ## Recent Logs (last 10 lines)
 ```
-npm error command sh -c node server.js
-npm error A complete log of this run can be found in: /home/appuser/.npm/_logs/2026-06-14T19_25_17_386Z-debug-0.log
-
-> a-modern-4psv@1.0.0 start
-> node server.js
-
 Refreshing insight feeds...
 Ethos running on port 4075
 Feed error Property News AU getaddrinfo ENOTFOUND www.propertynews.com.au
 Feeds refreshed — 112 new articles stored.
+npm error path /app
+npm error command failed
+npm error signal SIGTERM
+npm error command sh -c node server.js
+npm error A complete log of this run can be found in: /home/appuser/.npm/_logs/2026-06-14T21_51_57_836Z-debug-0.log
 ```
 
 ## Recent Events
