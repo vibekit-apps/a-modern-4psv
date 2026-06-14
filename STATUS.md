@@ -1,10 +1,10 @@
 # STATUS.md — Live Infrastructure (auto-updated)
-_Last updated: 2026-06-14T23:23:42.245Z_
+_Last updated: 2026-06-14T23:53:40.519Z_
 
 ## Container
 - **Name**: vk-a-modern-4psv
 - **Status**: exited
-- **Started**: 2026-06-14T21:51:57.743094975Z
+- **Started**: 2026-06-14T23:46:41.42028241Z
 - **Resources**: 0.00% CPU | 0B / 0B | 0B / 0B net
 - **Memory Limit**: 512MB
 - **Port**: 4075
@@ -12,9 +12,9 @@ _Last updated: 2026-06-14T23:23:42.245Z_
 ## App
 - **Name**: Purpose productions
 - **Subdomain**: a-modern-4psv.vibekit.bot
-- **DB Status**: error
-- **Health Failures**: 6
-- **Last Healthy**: 2026-06-14T22:51:16.707+00:00
+- **DB Status**: starting
+- **Health Failures**: 1
+- **Last Healthy**: 2026-06-14T23:47:18.984+00:00
 
 
 ## Host
@@ -22,15 +22,16 @@ _Last updated: 2026-06-14T23:23:42.245Z_
 
 ## Recent Logs (last 10 lines)
 ```
-Refreshing insight feeds...
-Ethos running on port 4075
-Feed error Property News AU getaddrinfo ENOTFOUND www.propertynews.com.au
-Feeds refreshed — 112 new articles stored.
-npm error path /app
-npm error command failed
-npm error signal SIGTERM
-npm error command sh -c node server.js
-npm error A complete log of this run can be found in: /home/appuser/.npm/_logs/2026-06-14T21_51_57_836Z-debug-0.log
+at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+    at Module.require (node:internal/modules/cjs/loader:1463:12)
+    at require (node:internal/modules/helpers:147:16)
+    at Object.<anonymous> (/app/server.js:3:17)
+    at Module._compile (node:internal/modules/cjs/loader:1705:14) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ '/app/server.js' ]
+}
+
+Node.js v22.22.1
 ```
 
 ## Recent Events
