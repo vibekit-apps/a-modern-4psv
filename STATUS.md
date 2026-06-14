@@ -1,20 +1,20 @@
 # STATUS.md — Live Infrastructure (auto-updated)
-_Last updated: 2026-06-14T22:13:08.884Z_
+_Last updated: 2026-06-14T22:18:42.454Z_
 
 ## Container
 - **Name**: vk-a-modern-4psv
 - **Status**: running
 - **Started**: 2026-06-14T21:51:57.743094975Z
-- **Resources**: 0.00% CPU | 45.98MiB / 512MiB | 3.53MB / 552kB net
+- **Resources**: 0.01% CPU | 40.06MiB / 512MiB | 3.54MB / 687kB net
 - **Memory Limit**: 512MB
 - **Port**: 4075
 
 ## App
 - **Name**: a-modern-4psv
 - **Subdomain**: a-modern-4psv.vibekit.bot
-- **DB Status**: error
+- **DB Status**: running
 - **Health Failures**: 0
-- **Last Healthy**: 2026-06-14T22:12:40.052+00:00
+- **Last Healthy**: 2026-06-14T22:18:40.12+00:00
 
 
 ## Host
