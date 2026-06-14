@@ -1,0 +1,7 @@
+{
+  "name": "a-modern-4psv",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "node server.js"
+  }
+}
