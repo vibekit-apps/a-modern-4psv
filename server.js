@@ -15,6 +15,8 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT,
     email TEXT NOT NULL,
+    phone TEXT,
+    state TEXT,
     message TEXT,
     created_at TEXT DEFAULT (datetime('now'))
   )
@@ -151,9 +153,10 @@ app.post('/api/insights/refresh', (req, res) => {
 
 // Submit lead
 app.post('/submit', (req, res) => {
-  const { name, email, message } = req.body;
+  const { name, email, phone, state, message } = req.body;
   if (!email) return res.status(400).json({ error: 'Email required' });
-  db.prepare('INSERT INTO leads (name, email, message) VALUES (?, ?, ?)').run(name || '', email, message || '');
+  if (!state) return res.status(400).json({ error: 'State required' });
+  db.prepare('INSERT INTO leads (name, email, phone, state, message) VALUES (?, ?, ?, ?, ?)').run(name || '', email, phone || '', state, message || '');
   res.json({ ok: true });
 });
 
@@ -169,16 +172,16 @@ app.get('/admin', (req, res) => {
     <body><form method="GET"><h2>Admin</h2><input type="password" name="pass" placeholder="Password" autofocus><button type="submit">Enter</button></form></body></html>`);
   }
   const leads = db.prepare('SELECT * FROM leads ORDER BY created_at DESC').all();
-  const rows = leads.map(l => `<tr><td>${l.id}</td><td>${l.created_at}</td><td>${l.name||''}</td><td>${l.email}</td><td>${l.message||''}</td></tr>`).join('');
+  const rows = leads.map(l => `<tr><td>${l.id}</td><td>${l.created_at}</td><td>${l.name||''}</td><td>${l.email}</td><td>${l.state||''}</td><td>${l.phone||''}</td><td>${l.message||''}</td></tr>`).join('');
   res.send(`<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">
   <style>*{margin:0;padding:0;box-sizing:border-box}body{background:#0b0f14;color:#e2e8f0;font-family:system-ui;padding:2rem}
   h1{margin-bottom:1.5rem;font-weight:500;color:#93c5fd}table{width:100%;border-collapse:collapse;font-size:.875rem}
   th{text-align:left;padding:.75rem 1rem;background:#141b24;color:#64748b;font-weight:600;border-bottom:1px solid #1e2d3d}
-  td{padding:.75rem 1rem;border-bottom:1px solid #1a2332;vertical-align:top}tr:hover td{background:#0f1923}
+  td{padding:.75rem 1rem;border-bottom:1px solid #1a2332;vertical-align:top;word-break:break-word}tr:hover td{background:#0f1923}
   .count{color:#64748b;font-size:.875rem;margin-bottom:1rem}</style></head>
   <body><h1>Leads</h1><p class="count">${leads.length} total</p>
-  <table><thead><tr><th>#</th><th>Date</th><th>Name</th><th>Email</th><th>Message</th></tr></thead>
-  <tbody>${rows}</tbody></table></body></html>`);
+  <table><thead><tr><th>#</th><th>Date</th><th>Name</th><th>Email</th><th>State</th><th>Phone</th><th>Message</th></tr></thead>
+  <tbody>${rows}</tbody></table></body></html>`)
 });
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
