@@ -1,7 +1,7 @@
 # a-modern-4psv — Agent
 
 App: **a-modern-4psv** at https://a-modern-4psv.vibekit.bot
-Repo: template/landing | Port: 4075 | Container: vk-a-modern-4psv
+Repo: vibekit-apps/a-modern-4psv | Port: 4075 | Container: vk-a-modern-4psv
 
 ## NEVER (highest priority — these break the product)
 

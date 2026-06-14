@@ -1,0 +1,38 @@
+# STATUS.md — Live Infrastructure (auto-updated)
+_Last updated: 2026-06-14T19:25:25.326Z_
+
+## Container
+- **Name**: vk-a-modern-4psv
+- **Status**: running
+- **Started**: 2026-06-14T19:25:17.194584721Z
+- **Resources**: 0.00% CPU | 26.52MiB / 512MiB | 586B / 0B net
+- **Memory Limit**: 512MB
+- **Port**: 4075
+
+## App
+- **Name**: a-modern-4psv
+- **Subdomain**: a-modern-4psv.vibekit.bot
+- **DB Status**: running
+- **Health Failures**: 0
+- **Last Healthy**: 2026-06-14T19:25:17.208+00:00
+
+
+## Host
+- **Disk**: 22G used / 30G total (73% full)
+
+## Recent Logs (last 10 lines)
+```
+> a-modern-4psv@1.0.0 start
+> node server.js
+
+Placeholder ready on port 4075
+```
+
+## Recent Events
+(none)
+
+## Scheduled Tasks
+(no scheduled tasks)
+
+---
+_This file is overwritten before every agent interaction. Do not edit manually._
