@@ -1,6 +1,6 @@
 const express = require('express');
 const path = require('path');
-const Database = require('better-sqlite3');
+const sqlite3 = require('sqlite3').verbose();
 const { XMLParser } = require('fast-xml-parser');
 const https = require('https');
 const http = require('http');
@@ -9,38 +9,43 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // DB setup
-const db = new Database(path.join(__dirname, 'leads.db'));
-db.exec(`
-  CREATE TABLE IF NOT EXISTS leads (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT,
-    email TEXT NOT NULL,
-    phone TEXT,
-    state TEXT,
-    message TEXT,
-    created_at TEXT DEFAULT (datetime('now'))
-  )
-`);
+const db = new sqlite3.Database(path.join(__dirname, 'leads.db'), (err) => {
+  if (err) console.error('DB init error:', err);
+  else console.log('Database connected');
+});
+
+db.serialize(() => {
+  db.run(`
+    CREATE TABLE IF NOT EXISTS leads (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT,
+      email TEXT NOT NULL,
+      phone TEXT,
+      state TEXT,
+      message TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+  db.run(`
+    CREATE TABLE IF NOT EXISTS articles (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      guid TEXT UNIQUE,
+      title TEXT,
+      link TEXT,
+      summary TEXT,
+      source TEXT,
+      category TEXT,
+      pub_date TEXT,
+      fetched_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+});
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
 
 // ── INSIGHTS ─────────────────────────────────────────────────────────────────
-
-db.exec(`
-  CREATE TABLE IF NOT EXISTS articles (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    guid TEXT UNIQUE,
-    title TEXT,
-    link TEXT,
-    summary TEXT,
-    source TEXT,
-    category TEXT,
-    pub_date TEXT,
-    fetched_at TEXT DEFAULT (datetime('now'))
-  )
-`);
 
 const FEEDS = [
   // Energy saving / efficiency
@@ -66,18 +71,27 @@ const FEEDS = [
   { url: 'https://inhabitat.com/feed/',                             source: 'Inhabitat',                category: 'design' },
 ];
 
-function fetchUrl(url) {
+function fetchUrl(url, retries = 2) {
   return new Promise((resolve, reject) => {
     const mod = url.startsWith('https') ? https : http;
-    const req = mod.get(url, { headers: { 'User-Agent': 'EthosInsights/1.0' }, timeout: 8000 }, res => {
+    const req = mod.get(url, { headers: { 'User-Agent': 'EthosInsights/1.0' }, timeout: 10000 }, res => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        return fetchUrl(res.headers.location).then(resolve).catch(reject);
+        return fetchUrl(res.headers.location, retries - 1).then(resolve).catch(reject);
+      }
+      if (res.statusCode !== 200) {
+        return reject(new Error(`HTTP ${res.statusCode}`));
       }
       let data = '';
       res.on('data', c => data += c);
       res.on('end', () => resolve(data));
     });
-    req.on('error', reject);
+    req.on('error', (e) => {
+      if (retries > 0) {
+        setTimeout(() => fetchUrl(url, retries - 1).then(resolve).catch(reject), 2000);
+      } else {
+        reject(e);
+      }
+    });
     req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
   });
 }
@@ -107,48 +121,42 @@ async function parseFeed(feed) {
   }
 }
 
-const insertArticle = db.prepare(`
-  INSERT OR IGNORE INTO articles (guid, title, link, summary, source, category, pub_date)
-  VALUES (@guid, @title, @link, @summary, @source, @category, @pub_date)
-`);
-
 async function refreshFeeds() {
   console.log('Refreshing insight feeds...');
   let count = 0;
   for (const feed of FEEDS) {
     const articles = await parseFeed(feed);
     for (const a of articles) {
-      try { insertArticle.run(a); count++; } catch (_) {}
+      db.run(
+        `INSERT OR IGNORE INTO articles (guid, title, link, summary, source, category, pub_date)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [a.guid, a.title, a.link, a.summary, a.source, a.category, a.pub_date],
+        function(err) { if (!err) count++; }
+      );
     }
   }
-  console.log(`Feeds refreshed — ${count} new articles stored.`);
+  setTimeout(() => console.log(`Feeds refreshed — ${count} new articles stored.`), 500);
 }
-
-// Refresh on startup + every 3 hours
-refreshFeeds();
-setInterval(refreshFeeds, 3 * 60 * 60 * 1000);
 
 // API: latest insights with optional category filter
 app.get('/api/insights', (req, res) => {
   const { category, limit = 30, offset = 0 } = req.query;
-  let rows;
-  if (category && category !== 'all') {
-    rows = db.prepare(
-      'SELECT * FROM articles WHERE category = ? ORDER BY pub_date DESC LIMIT ? OFFSET ?'
-    ).all(category, Number(limit), Number(offset));
-  } else {
-    rows = db.prepare(
-      'SELECT * FROM articles ORDER BY pub_date DESC LIMIT ? OFFSET ?'
-    ).all(Number(limit), Number(offset));
-  }
-  res.json(rows);
+  const query = category && category !== 'all'
+    ? 'SELECT * FROM articles WHERE category = ? ORDER BY pub_date DESC LIMIT ? OFFSET ?'
+    : 'SELECT * FROM articles ORDER BY pub_date DESC LIMIT ? OFFSET ?';
+  const params = category && category !== 'all'
+    ? [category, Number(limit), Number(offset)]
+    : [Number(limit), Number(offset)];
+  db.all(query, params, (err, rows) => {
+    res.json(err ? [] : (rows || []));
+  });
 });
 
 // Manual refresh trigger (admin only)
 app.post('/api/insights/refresh', (req, res) => {
   const { pass } = req.query;
   if (pass !== ADMIN_PASS) return res.status(401).json({ error: 'Unauthorised' });
-  refreshFeeds().then(() => res.json({ ok: true }));
+  refreshFeeds().then(() => res.json({ ok: true })).catch(e => res.status(500).json({ error: e.message }));
 });
 
 // Submit lead
@@ -156,8 +164,11 @@ app.post('/submit', (req, res) => {
   const { name, email, phone, state, message } = req.body;
   if (!email) return res.status(400).json({ error: 'Email required' });
   if (!state) return res.status(400).json({ error: 'State required' });
-  db.prepare('INSERT INTO leads (name, email, phone, state, message) VALUES (?, ?, ?, ?, ?)').run(name || '', email, phone || '', state, message || '');
-  res.json({ ok: true });
+  db.run(
+    'INSERT INTO leads (name, email, phone, state, message) VALUES (?, ?, ?, ?, ?)',
+    [name || '', email, phone || '', state, message || ''],
+    function(err) { res.json(err ? { error: err.message } : { ok: true }); }
+  );
 });
 
 // Admin page — password protected
@@ -171,19 +182,25 @@ app.get('/admin', (req, res) => {
     button{padding:.75rem;background:#3b82f6;color:#fff;border:none;border-radius:8px;font-size:1rem;font-weight:600;cursor:pointer}h2{text-align:center;font-weight:500}</style></head>
     <body><form method="GET"><h2>Admin</h2><input type="password" name="pass" placeholder="Password" autofocus><button type="submit">Enter</button></form></body></html>`);
   }
-  const leads = db.prepare('SELECT * FROM leads ORDER BY created_at DESC').all();
-  const rows = leads.map(l => `<tr><td>${l.id}</td><td>${l.created_at}</td><td>${l.name||''}</td><td>${l.email}</td><td>${l.state||''}</td><td>${l.phone||''}</td><td>${l.message||''}</td></tr>`).join('');
-  res.send(`<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">
-  <style>*{margin:0;padding:0;box-sizing:border-box}body{background:#0b0f14;color:#e2e8f0;font-family:system-ui;padding:2rem}
-  h1{margin-bottom:1.5rem;font-weight:500;color:#93c5fd}table{width:100%;border-collapse:collapse;font-size:.875rem}
-  th{text-align:left;padding:.75rem 1rem;background:#141b24;color:#64748b;font-weight:600;border-bottom:1px solid #1e2d3d}
-  td{padding:.75rem 1rem;border-bottom:1px solid #1a2332;vertical-align:top;word-break:break-word}tr:hover td{background:#0f1923}
-  .count{color:#64748b;font-size:.875rem;margin-bottom:1rem}</style></head>
-  <body><h1>Leads</h1><p class="count">${leads.length} total</p>
-  <table><thead><tr><th>#</th><th>Date</th><th>Name</th><th>Email</th><th>State</th><th>Phone</th><th>Message</th></tr></thead>
-  <tbody>${rows}</tbody></table></body></html>`)
+  db.all('SELECT * FROM leads ORDER BY created_at DESC', (err, leads) => {
+    if (err) {
+      return res.send(`<!DOCTYPE html><html><body>Error loading leads: ${err.message}</body></html>`);
+    }
+    const rows = (leads || []).map(l => `<tr><td>${l.id}</td><td>${l.created_at}</td><td>${l.name||''}</td><td>${l.email}</td><td>${l.state||''}</td><td>${l.phone||''}</td><td>${l.message||''}</td></tr>`).join('');
+    res.send(`<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">
+    <style>*{margin:0;padding:0;box-sizing:border-box}body{background:#0b0f14;color:#e2e8f0;font-family:system-ui;padding:2rem}
+    h1{margin-bottom:1.5rem;font-weight:500;color:#93c5fd}table{width:100%;border-collapse:collapse;font-size:.875rem}
+    th{text-align:left;padding:.75rem 1rem;background:#141b24;color:#64748b;font-weight:600;border-bottom:1px solid #1e2d3d}
+    td{padding:.75rem 1rem;border-bottom:1px solid #1a2332;vertical-align:top;word-break:break-word}tr:hover td{background:#0f1923}
+    .count{color:#64748b;font-size:.875rem;margin-bottom:1rem}</style></head>
+    <body><h1>Leads</h1><p class="count">${(leads || []).length} total</p>
+    <table><thead><tr><th>#</th><th>Date</th><th>Name</th><th>Email</th><th>State</th><th>Phone</th><th>Message</th></tr></thead>
+    <tbody>${rows}</tbody></table></body></html>`);
+  });
 });
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
-app.listen(PORT, () => console.log('Ethos running on port ' + PORT));
+db.on('open', () => {
+  app.listen(PORT, () => console.log('Ethos running on port ' + PORT));
+});

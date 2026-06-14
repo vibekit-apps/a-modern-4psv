@@ -127,8 +127,8 @@ footer a:hover{color:var(--fg)}
 <section class="hero">
   <div>
     <div class="hero-eyebrow">Home Builder &amp; Design</div>
-    <h1>Your Australian dream home,<br>built to <em>last.</em></h1>
-    <p>Custom homes engineered for Australian climate, designed with passive solar, rainwater harvesting, and solar-ready infrastructure baked in from day one. From Tasmania to Far North Queensland, we build homes that work with the land and your lifestyle.</p>
+    <h1>Your dream home,<br>built to <em>last.</em></h1>
+    <p>Custom homes engineered for your climate and location, designed with passive solar, rainwater harvesting, and solar-ready infrastructure baked in from day one. We build homes that work with the land and your lifestyle, anywhere on Earth.</p>
     <div class="hero-btns">
       <a href="#signup" class="btn-primary">Start Your Build</a>
       <a href="#features" class="btn-ghost">See What We Do</a>
@@ -143,7 +143,7 @@ footer a:hover{color:var(--fg)}
   <div class="section-wrap">
     <div class="section-label">Why Ethos</div>
     <h2 class="section-title">Built different.<br>By design.</h2>
-    <p class="section-sub">Every home we build across Australia is engineered for your local climate, terrain, and water availability. We work with state-specific rebate schemes, understand council requirements in every state, and build homes that thrive whether you're on a coastal block, inland acreage, or suburban lot.</p>
+    <p class="section-sub">Every home we build is engineered for your local climate, terrain, and water availability. We understand local building codes, rebate schemes, and permit requirements worldwide, and build homes that thrive whether you're on a coastal block, rural acreage, or suburban lot.</p>
     <div class="features-grid">
 
       <div class="feature-card">
@@ -217,7 +217,7 @@ footer a:hover{color:var(--fg)}
   <div class="section-wrap">
     <div class="section-label">Packages</div>
     <h2 class="section-title">Transparent pricing.<br>No surprises.</h2>
-    <p class="section-sub">Three packages to fit different budgets and ambitions — all priced in AUD, all include dedicated project management, and all qualify for state-level rebates (we handle the paperwork).</p>
+    <p class="section-sub">Three packages to fit different budgets and ambitions — all priced in USD, all include dedicated project management, and all qualify for local rebates and incentives (we handle the paperwork).</p>
     <div class="pricing-grid">
 
       <div class="pricing-card">
@@ -225,8 +225,8 @@ footer a:hover{color:var(--fg)}
         <h3>Starter Home</h3>
         <p class="pricing-desc">Perfect for first-time Australian buyers wanting a quality, efficient build on a clear budget — no surprises.</p>
         <div class="pricing-price">
-          <div class="amount">AUD $380k</div>
-          <div class="note">Starting price · up to 167 m²</div>
+          <div class="amount">$380k</div>
+          <div class="note">Starting price USD · up to 167 m²</div>
         </div>
         <ul class="pricing-features">
           <li>Custom floor plan (1 revision)</li>
@@ -245,8 +245,8 @@ footer a:hover{color:var(--fg)}
         <h3>Family Home</h3>
         <p class="pricing-desc">Our most-ordered package — premium finishes, solar + battery-ready design, full sustainability built in, and unlimited revisions.</p>
         <div class="pricing-price">
-          <div class="amount">AUD $680k</div>
-          <div class="note">Starting price · up to 278 m²</div>
+          <div class="amount">$680k</div>
+          <div class="note">Starting price USD · up to 278 m²</div>
         </div>
         <ul class="pricing-features">
           <li>Fully custom design (3 revisions)</li>
@@ -321,26 +321,26 @@ fetch('/api/insights?limit=3')
 <section class="cta-section" id="signup">
   <div class="cta-box">
     <h2>Ready to build<br>your Ethos home?</h2>
-    <p>Drop your details and we'll reach out within 1 business day to schedule a free design consultation — including a self-sufficiency assessment and local rebate briefing for your property.</p>
+    <p>Drop your details and we'll reach out within 1 business day to schedule a free design consultation — including a site assessment and local rebate briefing for your locale.</p>
     <form class="signup-form" id="lead-form" onsubmit="handleSignup(event)" style="flex-direction:column;gap:1rem">
       <input type="text" name="name" placeholder="Your name" required>
       <input type="email" name="email" placeholder="your@email.com" required>
-      <select name="state" required style="padding:.875rem 1rem;background:#0b0f14;border:1px solid var(--border);border-radius:7px;color:var(--fg);font-family:system-ui,sans-serif;font-size:.9375rem;outline:none;transition:border-color .2s">
-        <option value="">Select your state</option>
-        <option value="NSW">New South Wales</option>
-        <option value="VIC">Victoria</option>
-        <option value="QLD">Queensland</option>
-        <option value="WA">Western Australia</option>
-        <option value="SA">South Australia</option>
-        <option value="TAS">Tasmania</option>
-        <option value="ACT">ACT</option>
-        <option value="NT">Northern Territory</option>
+      <select name="region" required style="padding:.875rem 1rem;background:#0b0f14;border:1px solid var(--border);border-radius:7px;color:var(--fg);font-family:system-ui,sans-serif;font-size:.9375rem;outline:none;transition:border-color .2s">
+        <option value="">Select your country/region</option>
+        <option value="USA">United States</option>
+        <option value="Canada">Canada</option>
+        <option value="Australia">Australia</option>
+        <option value="UK">United Kingdom</option>
+        <option value="EU">Europe</option>
+        <option value="NZ">New Zealand</option>
+        <option value="Asia">Asia</option>
+        <option value="Other">Other</option>
       </select>
-      <input type="tel" name="phone" placeholder="0X XXXX XXXX (optional)">
+      <input type="tel" name="phone" placeholder="0X XXXX XXXX" required>
       <textarea name="message" placeholder="Tell us about your project, location, and budget (optional)" rows="3" style="padding:.875rem 1rem;background:#0b0f14;border:1px solid var(--border);border-radius:7px;color:var(--fg);font-family:system-ui,sans-serif;font-size:.9375rem;outline:none;resize:vertical;transition:border-color .2s"></textarea>
       <button type="submit" style="width:100%">Get Started</button>
     </form>
-    <p class="form-note">No spam. Australian-based, serving all states and territories.</p>
+    <p class="form-note">No spam. We're global, serving every continent.</p>
     <p id="signup-thanks">Thanks — we'll be in touch soon.</p>
   </div>
 </section>

@@ -5,7 +5,7 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "better-sqlite3": "^12.10.1",
+    "sqlite3": "^5.1.7",
     "express": "^5.2.1",
     "fast-xml-parser": "^5.8.0"
   }
