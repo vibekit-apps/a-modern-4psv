@@ -19,6 +19,17 @@ const db = new sqlite3.Database(path.join(__dirname, 'leads.db'), (err) => {
 // Catch any unhandled statement-level errors so they don't crash the process
 db.on('error', (err) => console.error('[DB error]', err.message));
 
+// Prevent uncaught DB statement errors from crashing the server
+process.on('uncaughtException', (err) => {
+  if (err && (err.code === 'SQLITE_READONLY' || err.code === 'SQLITE_BUSY' || err.code === 'SQLITE_CANTOPEN')) {
+    console.error('[DB uncaught]', err.message);
+  } else {
+    console.error('[Uncaught Exception]', err);
+    // Re-throw non-DB uncaught exceptions so genuine crashes still surface
+    throw err;
+  }
+});
+
 db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS leads (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
