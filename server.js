@@ -16,6 +16,9 @@ const db = new sqlite3.Database(path.join(__dirname, 'leads.db'), (err) => {
   else console.log('Database connected');
 });
 
+// Catch any unhandled statement-level errors so they don't crash the process
+db.on('error', (err) => console.error('[DB error]', err.message));
+
 db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS leads (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -119,7 +122,8 @@ async function parseFeed(feed) {
     console.error(`[Feed Error] ${feed.source}: ${e.message}`);
     db.run(
       'INSERT INTO feed_errors (feed_source, feed_url, error_message) VALUES (?, ?, ?)',
-      [feed.source, feed.url, e.message]
+      [feed.source, feed.url, e.message],
+      (dbErr) => { if (dbErr) console.error('[Feed Error Log]', dbErr.message); }
     );
     return [];
   }
@@ -185,7 +189,8 @@ async function runHealthChecks() {
   const status = issues.length === 0 ? 'ok' : 'degraded';
   db.run(
     'INSERT INTO site_health (check_type, status, detail) VALUES (?, ?, ?)',
-    ['auto', status, issues.map(i => i.detail).join(' | ') || 'All clear']
+    ['auto', status, issues.map(i => i.detail).join(' | ') || 'All clear'],
+    (dbErr) => { if (dbErr) console.error('[Health Log]', dbErr.message); }
   );
 
   if (issues.length === 0) {
@@ -324,14 +329,12 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 // ── STARTUP ───────────────────────────────────────────────────────────────────
 
-db.on('open', () => {
-  app.listen(PORT, () => {
-    console.log('Ethos running on port ' + PORT);
-    // Initial feed load
-    refreshFeeds();
-    // Re-fetch feeds every 6 hours
-    setInterval(refreshFeeds, 6 * 60 * 60 * 1000);
-    // Health check every 15 minutes
-    setInterval(runHealthChecks, 15 * 60 * 1000);
-  });
+app.listen(PORT, () => {
+  console.log('Ethos running on port ' + PORT);
+  // Initial feed load
+  refreshFeeds();
+  // Re-fetch feeds every 6 hours
+  setInterval(refreshFeeds, 6 * 60 * 60 * 1000);
+  // Health check every 15 minutes
+  setInterval(runHealthChecks, 15 * 60 * 1000);
 });
