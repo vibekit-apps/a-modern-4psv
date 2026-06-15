@@ -1,6 +1,6 @@
 const express = require('express');
 const path = require('path');
-const sqlite3 = require('sqlite3').verbose();
+const Database = require('better-sqlite3');
 const { XMLParser } = require('fast-xml-parser');
 const https = require('https');
 const http = require('http');
@@ -11,59 +11,56 @@ const ADMIN_PASS = process.env.ADMIN_PASS || 'ethos2026';
 
 // ── DB ────────────────────────────────────────────────────────────────────────
 
-const db = new sqlite3.Database(path.join(__dirname, 'leads.db'), (err) => {
-  if (err) console.error('DB init error:', err);
-  else console.log('Database connected');
-});
+let db;
+try {
+  db = new Database(path.join(__dirname, 'leads.db'));
+  console.log('Database connected');
+} catch (err) {
+  console.error('DB init error:', err);
+  process.exit(1);
+}
 
-// Catch any unhandled statement-level errors so they don't crash the process
-db.on('error', (err) => console.error('[DB error]', err.message));
-
-// Prevent uncaught DB statement errors from crashing the server
-process.on('uncaughtException', (err) => {
-  if (err && (err.code === 'SQLITE_READONLY' || err.code === 'SQLITE_BUSY' || err.code === 'SQLITE_CANTOPEN')) {
-    console.error('[DB uncaught]', err.message);
-  } else {
-    console.error('[Uncaught Exception]', err);
-    // Re-throw non-DB uncaught exceptions so genuine crashes still surface
-    throw err;
-  }
-});
-
-db.serialize(() => {
-  db.run(`CREATE TABLE IF NOT EXISTS leads (
+db.exec(`
+  CREATE TABLE IF NOT EXISTS leads (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT, email TEXT NOT NULL, phone TEXT, state TEXT, message TEXT,
     created_at TEXT DEFAULT (datetime('now'))
-  )`);
-  db.run(`CREATE TABLE IF NOT EXISTS articles (
+  );
+  CREATE TABLE IF NOT EXISTS articles (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     guid TEXT UNIQUE, title TEXT, link TEXT, summary TEXT,
     source TEXT, category TEXT, pub_date TEXT,
     fetched_at TEXT DEFAULT (datetime('now'))
-  )`);
-  db.run(`CREATE TABLE IF NOT EXISTS feed_errors (
+  );
+  CREATE TABLE IF NOT EXISTS feed_errors (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     feed_source TEXT, feed_url TEXT NOT NULL,
     error_message TEXT NOT NULL, resolved INTEGER DEFAULT 0,
     created_at TEXT DEFAULT (datetime('now'))
-  )`);
-  db.run(`CREATE TABLE IF NOT EXISTS site_health (
+  );
+  CREATE TABLE IF NOT EXISTS site_health (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     check_type TEXT, status TEXT, detail TEXT,
     created_at TEXT DEFAULT (datetime('now'))
-  )`);
-});
+  );
+`);
 
 function runQuery(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.run(sql, params, function(err) { err ? reject(err) : resolve(this); });
-  });
+  try {
+    const stmt = db.prepare(sql);
+    const info = stmt.run(...params);
+    return Promise.resolve({ changes: info.changes, lastID: info.lastInsertRowid });
+  } catch (e) {
+    return Promise.reject(e);
+  }
 }
 function allQuery(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.all(sql, params, (err, rows) => err ? reject(err) : resolve(rows || []));
-  });
+  try {
+    const rows = db.prepare(sql).all(...params);
+    return Promise.resolve(rows || []);
+  } catch (e) {
+    return Promise.reject(e);
+  }
 }
 
 app.use(express.json());
@@ -131,11 +128,9 @@ async function parseFeed(feed) {
     }));
   } catch (e) {
     console.error(`[Feed Error] ${feed.source}: ${e.message}`);
-    db.run(
-      'INSERT INTO feed_errors (feed_source, feed_url, error_message) VALUES (?, ?, ?)',
-      [feed.source, feed.url, e.message],
-      (dbErr) => { if (dbErr) console.error('[Feed Error Log]', dbErr.message); }
-    );
+    try {
+      db.prepare('INSERT INTO feed_errors (feed_source, feed_url, error_message) VALUES (?, ?, ?)').run(feed.source, feed.url, e.message);
+    } catch (dbErr) { console.error('[Feed Error Log]', dbErr.message); }
     return [];
   }
 }
@@ -198,11 +193,9 @@ async function runHealthChecks() {
 
   // Log health check result
   const status = issues.length === 0 ? 'ok' : 'degraded';
-  db.run(
-    'INSERT INTO site_health (check_type, status, detail) VALUES (?, ?, ?)',
-    ['auto', status, issues.map(i => i.detail).join(' | ') || 'All clear'],
-    (dbErr) => { if (dbErr) console.error('[Health Log]', dbErr.message); }
-  );
+  try {
+    db.prepare('INSERT INTO site_health (check_type, status, detail) VALUES (?, ?, ?)').run('auto', status, issues.map(i => i.detail).join(' | ') || 'All clear');
+  } catch (dbErr) { console.error('[Health Log]', dbErr.message); }
 
   if (issues.length === 0) {
     console.log('[Health] All clear');
@@ -237,7 +230,12 @@ app.get('/api/insights', (req, res) => {
   const params = category && category !== 'all'
     ? [category, Number(limit), Number(offset)]
     : [Number(limit), Number(offset)];
-  db.all(query, params, (err, rows) => res.json(err ? [] : (rows || [])));
+  try {
+    const rows = db.prepare(query).all(...params);
+    res.json(rows || []);
+  } catch (err) {
+    res.json([]);
+  }
 });
 
 app.post('/api/insights/refresh', (req, res) => {
@@ -256,11 +254,12 @@ app.post('/submit', (req, res) => {
   const { name, email, phone, state, message } = req.body;
   if (!email) return res.status(400).json({ error: 'Email required' });
   if (!state) return res.status(400).json({ error: 'State required' });
-  db.run(
-    'INSERT INTO leads (name, email, phone, state, message) VALUES (?, ?, ?, ?, ?)',
-    [name || '', email, phone || '', state, message || ''],
-    function(err) { res.json(err ? { error: err.message } : { ok: true }); }
-  );
+  try {
+    db.prepare('INSERT INTO leads (name, email, phone, state, message) VALUES (?, ?, ?, ?, ?)').run(name || '', email, phone || '', state, message || '');
+    res.json({ ok: true });
+  } catch (err) {
+    res.json({ error: err.message });
+  }
 });
 
 // ── ADMIN ─────────────────────────────────────────────────────────────────────

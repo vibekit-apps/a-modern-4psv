@@ -1,5 +1,5 @@
 # STATUS.md — Live Infrastructure (auto-updated)
-_Last updated: 2026-06-15T04:23:51.638Z_
+_Last updated: 2026-06-15T04:48:35.723Z_
 
 ## Container
 - **Name**: vk-a-modern-4psv
@@ -12,8 +12,8 @@ _Last updated: 2026-06-15T04:23:51.638Z_
 ## App
 - **Name**: Purpose productions
 - **Subdomain**: a-modern-4psv.vibekit.bot
-- **DB Status**: error
-- **Health Failures**: 3
+- **DB Status**: running
+- **Health Failures**: 4
 - **Last Healthy**: 2026-06-15T03:59:16.316+00:00
 
 
