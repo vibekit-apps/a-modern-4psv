@@ -1,10 +1,10 @@
 # STATUS.md — Live Infrastructure (auto-updated)
-_Last updated: 2026-06-15T04:48:35.723Z_
+_Last updated: 2026-06-15T09:30:18.244Z_
 
 ## Container
 - **Name**: vk-a-modern-4psv
 - **Status**: exited
-- **Started**: 2026-06-15T03:49:53.995493784Z
+- **Started**: 2026-06-15T09:08:48.768814117Z
 - **Resources**: 0.00% CPU | 0B / 0B | 0B / 0B net
 - **Memory Limit**: 512MB
 - **Port**: 4075
@@ -12,9 +12,9 @@ _Last updated: 2026-06-15T04:48:35.723Z_
 ## App
 - **Name**: Purpose productions
 - **Subdomain**: a-modern-4psv.vibekit.bot
-- **DB Status**: running
-- **Health Failures**: 4
-- **Last Healthy**: 2026-06-15T03:59:16.316+00:00
+- **DB Status**: error
+- **Health Failures**: 1
+- **Last Healthy**: 2026-06-15T09:24:15.435+00:00
 
 
 ## Host
@@ -22,16 +22,16 @@ _Last updated: 2026-06-15T04:48:35.723Z_
 
 ## Recent Logs (last 10 lines)
 ```
-at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
-    at Module.require (node:internal/modules/cjs/loader:1463:12)
-    at require (node:internal/modules/helpers:147:16)
-    at Object.<anonymous> (/app/server.js:3:17)
-    at Module._compile (node:internal/modules/cjs/loader:1705:14) {
-  code: 'MODULE_NOT_FOUND',
-  requireStack: [ '/app/server.js' ]
-}
+npm error A complete log of this run can be found in: /home/appuser/.npm/_logs/2026-06-15T05_34_51_475Z-debug-0.log
 
-Node.js v22.22.1
+> a-modern-4psv@1.0.0 start
+> node server.js
+
+npm error path /app
+npm error command failed
+npm error signal SIGTERM
+npm error command sh -c node server.js
+npm error A complete log of this run can be found in: /home/appuser/.npm/_logs/2026-06-15T09_08_48_823Z-debug-0.log
 ```
 
 ## Recent Events
